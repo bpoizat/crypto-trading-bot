@@ -14,11 +14,7 @@ def get_klines(client, symbol, interval, start):
     dict_data = dict(zip(columns, transposed_data))
     return dict_data
 
-def get_data(config_binance, param_data):
-    # create binance client
-    client = Client(config_binance['api_key'], config_binance['api_secret'])
-    client.ping()
-
+def get_data(client, param_data):
     # We need long and short timeframe
     data = {
         'long_tf': get_klines(client, param_data['symbol'], param_data['long_interval'], param_data['long_start']),
@@ -26,3 +22,8 @@ def get_data(config_binance, param_data):
     }
 
     return data
+
+def get_last_trade(client, param_data):
+    last_trade = client.get_recent_trades(symbol=param_data['symbol'], limit=1)
+
+    return last_trade

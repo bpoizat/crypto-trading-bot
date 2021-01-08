@@ -148,6 +148,7 @@ def backtest_loop(list_param):
                 quantity = money/buy_price
                 # print('Buying for', money , 'at', buy_price, 'qty', quantity, 'time', t)
                 fees += fee*money
+                # put all money ou keep benefits?
                 money = 0
             # elif decision == 'sell':
             #     sell_order_placed = True
