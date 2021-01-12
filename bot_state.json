@@ -1,1 +1,1 @@
-{"buy_status": false, "quantity": 0.0, "take_profit": 0.0, "stop_loss": 0.0}
+{"buy_status": false, "quantity": 0.0, "take_profit": 0.0, "stop_loss": 0.0, "trade": {"entry_price": 0.0, "quantity": 0.0, "money_spent": 0.0, "exit_price": 0.0, "money_earned": 0.0, "bilan": 0.0.\}}

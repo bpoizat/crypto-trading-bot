@@ -5,6 +5,7 @@ import logging
 import telegram
 import json
 import time
+import csv
 # from linetimer import CodeTimer # to profile and optimize, example:
 # with CodeTimer('getting data'):
 #       data = get_data(config_binance, param_data)
@@ -34,6 +35,21 @@ def fake_order(price, qty):
         'executedQty': qty
     }
 
+def save_trade(trade):
+    filename = 'trade_record.csv'
+    fieldnames = ['quantity', 'entry_price', 'exit_price', 'money_spent', 'money_earned', 'bilan']
+
+    try:
+        with open(filename, 'x', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerow(trade)
+    except FileExistsError:
+        # File already exists
+        with open(filename, 'a', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writerow(trade)
+
 if __name__ == "__main__":
 
     # Logging
@@ -53,12 +69,17 @@ if __name__ == "__main__":
     telegram_token = config['Telegram']['token_id']
     bot = telegram.Bot(token=telegram_token)
 
-    # reading saved state
+    # read saved state
     state = read_state()
     logging.info('Bot started with state: %r %f %f %f', state['buy_status'], state['quantity'], state['stop_loss'], state['take_profit'])
 
+    # Trade record
+    if state['buy_status']:
+        trade = state['trade']
+
     client = Client(config['Binance']['api_key'], config['Binance']['api_secret'])
     money = float(config['Strategy']['money'])
+    bilan = 0
     isRunning = True
 
     print('Bot started correctly!')
@@ -114,11 +135,18 @@ if __name__ == "__main__":
 
             entry_price = float(order['price'])
             state['quantity'] = float(order['executedQty'])
-            logging.info('%f purchased at %f - order n:%d', state['quantity'], entry_price, order['orderId'])
-
             state['stop_loss'] = entry_price - (entry_price*float(param_strategy['stop_loss']))
             state['take_profit'] = entry_price + (entry_price*float(param_strategy['take_profit']))
+            logging.info('%f purchased at %f - order n:%d', state['quantity'], entry_price, order['orderId'])
             logging.debug('Stop loss set at %f, take profit at %f', state['stop_loss'], state['take_profit'])
+
+            # recording trade
+            trade = {
+                'entry_price': entry_price,
+                'quantity': state['quantity'],
+                'money_spent': entry_price*state['quantity'],
+            }
+            state['trade'] = trade
 
             message = 'Buying ' + str(state['quantity']) + ' ' + param_data['symbol'] + ' at ' + str(entry_price)
             try:
@@ -166,10 +194,18 @@ if __name__ == "__main__":
 
                 exit_price = float(order['price'])
                 quantity_sold = float(order['executedQty'])
+                if quantity_sold != state['quantity']:
+                    logger.warning('Quantity sold different than quantity bought, UNEXPECTED')
                 state['quantity'] = 0.0   #?
                 state['take_profit'] = 0.0
                 state['stop_loss'] = 0.0
                 logging.info('%f sold at %f - order n:%d', quantity_sold, exit_price, order['orderId'])
+
+                # recording trade
+                trade['exit_price'] = exit_price
+                trade['money_earned'] = exit_price*quantity_sold
+                trade['bilan'] = trade['money_earned'] - trade['money_spent']
+                save_trade(trade)
 
                 message = 'Sold ' + str(quantity_sold) + ' ' + param_data['symbol'] + ' at ' + str(exit_price)
                 try:
@@ -179,6 +215,13 @@ if __name__ == "__main__":
 
                 state['buy_status'] = False
                 write_state(state)
+
+                # Money won or lost since start of the bot
+                bilan += trade['bilan']
+                print(bilan)
+                if bilan < float(param_strategy['switchoff'])*money*-1:
+                    logging.info('Lost %d, stopping the bot', bilan)
+                    isRunning = False
 
         elif decision == 'sell':
             print('todo')
