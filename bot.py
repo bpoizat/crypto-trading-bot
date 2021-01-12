@@ -9,12 +9,11 @@ import time
 # with CodeTimer('getting data'):
 #       data = get_data(config_binance, param_data)
 from binance.client import Client
+from binance.exceptions import BinanceRequestException, BinanceAPIException, BinanceOrderException
 
 from binance_data import get_data, get_last_trade
 from indicators import calculate_indicators
 from strategy import *
-
-isRunning = False
 
 def read_state():
     state = {}
@@ -48,17 +47,22 @@ if __name__ == "__main__":
 
     # reading saved state
     state = read_state()
-    logging.info('Bot starting with state: %r %f %f %f', state['buy_status'], state['quantity'], state['stop_loss'], state['take_profit'])
+    logging.info('Bot started with state: %r %f %f %f', state['buy_status'], state['quantity'], state['stop_loss'], state['take_profit'])
 
     client = Client(config['Binance']['api_key'], config['Binance']['api_secret'])
-    money = config['Strategy']['money']
-    isRunning = False
+    money = float(config['Strategy']['money'])
+    isRunning = True
 
-    bot.sendMessage(chat_id=telegram_chat_id, text='test')    
+    print('Bot started correctly!')
 
     while isRunning:
         # Get data from binance
-        data = get_data(client, param_data)
+        try:
+            data = get_data(client, param_data)
+        except (BinanceRequestException, BinanceAPIException) as err:
+            logging.error('Error when retrieving data: %s', err)
+            time.sleep(5)
+            continue
 
         # Calculate indicators
         indicators = calculate_indicators(data, param_indicators)
@@ -66,66 +70,111 @@ if __name__ == "__main__":
         # Analyse indicators following strategy
         decision = strategy1(indicators, param_strategy, state['buy_status'])
 
+        # No trade going on, we decide to enter long
         if not state['buy_status'] and decision == 'buy':
-            last_trade = get_last_trade(client, param_data)
-            last_price = last_trade[-1]['price']
-            state['quantity'] = round(money/last_price, 2)
-            logging.info('Ordering %f of %s at %f', state['quantity'], param_data['symbol'], last_price)
+            # getting the last price
+            try:
+                last_trade = get_last_trade(client, param_data)
+            except (BinanceRequestException, BinanceAPIException) as err:
+                logging.error('Error when retrieving data: %s', err)
+                time.sleep(5)
+                continue
+            last_price = float(last_trade[-1]['price'])
+
+            # calculating quantity of coins to buy
+            quantityToOrder = round(money/last_price, 2)
+            logging.info('Ordering %f of %s at %f', quantityToOrder, param_data['symbol'], last_price)
 
             # place order
-            # order = client.order_market_buy(symbol=param_data['symbol'], quantity=state['quantity'])
+            try:
+                # order = client.order_market_buy(symbol=param_data['symbol'], quantity=quantityToOrder)
+                pass
+            except (BinanceRequestException, BinanceAPIException, BinanceOrderException) as err:
+                logging.error('Error when placing order: %s', err)
+                time.sleep(5)
+                continue
             print(order)
-            status = order['status']
-            while status != 'FILLED':
-                logger.debug('Order %s not filled, waiting...', order['clientOrderId'])
+
+            # Checking if order is filled
+            while order['status'] != 'FILLED':   # Timeout?
+                logger.info('Order %s not filled: %s, waiting...', order['orderId'], order['status'])
+                try:
+                    order = client.get_order(symbol=symbol=param_data['symbol'], orderId=order['orderId'])
+                except (BinanceRequestException, BinanceAPIException) as Err:
+                    logging.error('Error when checking order: %s', err)
                 time.sleep(1)
-            else:
-                entry_price = float(order['price'])
-                state['quantity'] = float(order['executedQty'])
-                logger.info('%f purchased at %f - order n:%s', state['quantity'], entry_price, order['clientOrderId'])
-                message = 'Buying ' + str(state['quantity']) + ' ' + param_data['symbol'] + ' at ' + entry_price
+
+            entry_price = float(order['price'])
+            state['quantity'] = float(order['executedQty'])
+            logger.info('%f purchased at %f - order n:%s', state['quantity'], entry_price, order['orderId'])
+
+            state['stop_loss'] = entry_price - (entry_price*param_strategy['stop_loss'])
+            state['take_profit'] = entry_price + (entry_price*param_strategy['take_profit'])
+            logger.debug('Stop loss set at %f, taking profit at %f', state['stop_loss'], state['take_profit'])
+
+            message = 'Buying ' + str(state['quantity']) + ' ' + param_data['symbol'] + ' at ' + entry_price
+            try:
                 bot.sendMessage(chat_id=telegram_chat_id, text=message)
+            except telegram.error.TelegramError as err:
+                logging.error('Error when sending telegram message: %s', err)
 
-                state['stop_loss'] = entry_price - (entry_price*param_strategy['stop_loss'])
-                state['take_profit'] = entry_price + (entry_price*param_strategy['take_profit'])
-                logger.debug('Stop loss set at %f, taking profit at %f', state['stop_loss'], state['take_profit'])
+            state['buy_status'] = True
+            write_state(state)
 
-                state['buy_status'] = True
-
-                write_state(state)
-
+        # Trade going on, we are long
         elif state['buy_status']:
-            last_trade = get_last_trade(client, param_data)
+            # getting the last price
+            try:
+                last_trade = get_last_trade(client, param_data)
+            except (BinanceRequestException, BinanceAPIException) as err:
+                logging.error('Error when retrieving data: %s', err)
+                time.sleep(5)
+                continue
+            
+            # if we hit the stop loss or the take profit
             if state['stop_loss'] > float(last_trade[-1]['price']) or state['take_profit'] < float(last_trade[-1]['price']):
                 decision = 'sell'
 
             if decision == 'sell':
                 logging.info('Selling %f of %s at %f', state['quantity'], param_data['symbol'], last_trade[-1]['price'])
                 # place order
-                # order = client.order_market_sell(symbol=param_data['symbol'], quantity=state['quantity'])
+                try:
+                    # order = client.order_market_sell(symbol=param_data['symbol'], quantity=state['quantity'])
+                    pass
+                except (BinanceRequestException, BinanceAPIException, BinanceOrderException) as err:
+                    logging.error('Error when placing order: %s', err)
+                    time.sleep(5)
+                    continue
                 print(order)
-                status = order['status']
-                while status != 'FILLED':
-                    logger.debug('Order %s not filled, waiting...', order['clientOrderId'])
+
+                # Checking if order is filled
+                while order['status'] != 'FILLED':
+                    logger.info('Order %s not filled: %s, waiting...', order['orderId'], order['status'])
+                    try:
+                        order = client.get_order(symbol=symbol=param_data['symbol'], orderId=order['orderId'])
+                    except (BinanceRequestException, BinanceAPIException) as Err:
+                        logging.error('Error when checking order: %s', err)
                     time.sleep(1)
-                else:
-                    exit_price = float(order['price'])
-                    quantity_sold = float(order['executedQty'])
-                    state['quantity'] = 0.0   #?
-                    state['take_profit'] = 0.0
-                    state['stop_loss'] = 0.0
-                    message = 'Sold ' + str(quantity_sold) + ' ' + param_data['symbol'] + ' at ' + exit_price
-                    logger.info('%f sold at %f - order n:%s', quantity_sold, exit_price, order['clientOrderId'])
 
+                exit_price = float(order['price'])
+                quantity_sold = float(order['executedQty'])
+                state['quantity'] = 0.0   #?
+                state['take_profit'] = 0.0
+                state['stop_loss'] = 0.0
+                logger.info('%f sold at %f - order n:%s', quantity_sold, exit_price, order['orderId'])
+
+                message = 'Sold ' + str(quantity_sold) + ' ' + param_data['symbol'] + ' at ' + exit_price
+                try:
                     bot.sendMessage(chat_id=telegram_chat_id, text=message)
+                except telegram.error.TelegramError as err:
+                    logging.error('Error when sending telegram message: %s', err)
 
-                    state['buy_status'] = False
-
-                    write_state(state)
+                state['buy_status'] = False
+                write_state(state)
 
         elif decision == 'sell':
             print('todo')
 
-    time.sleep(10)
+        time.sleep(10)
 
 
