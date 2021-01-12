@@ -26,6 +26,14 @@ def write_state(state):
         data = json.dump(state, json_file)
         return data
 
+def fake_order(price, qty):
+    return {
+        'status': 'FILLED',
+        'orderId': 15,
+        'price': str(price),
+        'executedQty': qty
+    }
+
 if __name__ == "__main__":
 
     # Logging
@@ -97,22 +105,22 @@ if __name__ == "__main__":
 
             # Checking if order is filled
             while order['status'] != 'FILLED':   # Timeout?
-                logger.info('Order %s not filled: %s, waiting...', order['orderId'], order['status'])
+                logging.info('Order %d not filled: %s, waiting...', order['orderId'], order['status'])
                 try:
-                    order = client.get_order(symbol=symbol=param_data['symbol'], orderId=order['orderId'])
-                except (BinanceRequestException, BinanceAPIException) as Err:
+                    order = client.get_order(symbol=param_data['symbol'], orderId=order['orderId'])
+                except (BinanceRequestException, BinanceAPIException) as err:
                     logging.error('Error when checking order: %s', err)
                 time.sleep(1)
 
             entry_price = float(order['price'])
             state['quantity'] = float(order['executedQty'])
-            logger.info('%f purchased at %f - order n:%s', state['quantity'], entry_price, order['orderId'])
+            logging.info('%f purchased at %f - order n:%d', state['quantity'], entry_price, order['orderId'])
 
-            state['stop_loss'] = entry_price - (entry_price*param_strategy['stop_loss'])
-            state['take_profit'] = entry_price + (entry_price*param_strategy['take_profit'])
-            logger.debug('Stop loss set at %f, taking profit at %f', state['stop_loss'], state['take_profit'])
+            state['stop_loss'] = entry_price - (entry_price*float(param_strategy['stop_loss']))
+            state['take_profit'] = entry_price + (entry_price*float(param_strategy['take_profit']))
+            logging.debug('Stop loss set at %f, take profit at %f', state['stop_loss'], state['take_profit'])
 
-            message = 'Buying ' + str(state['quantity']) + ' ' + param_data['symbol'] + ' at ' + entry_price
+            message = 'Buying ' + str(state['quantity']) + ' ' + param_data['symbol'] + ' at ' + str(entry_price)
             try:
                 bot.sendMessage(chat_id=telegram_chat_id, text=message)
             except telegram.error.TelegramError as err:
@@ -130,17 +138,17 @@ if __name__ == "__main__":
                 logging.error('Error when retrieving data: %s', err)
                 time.sleep(5)
                 continue
+            last_price = float(last_trade[-1]['price'])
             
             # if we hit the stop loss or the take profit
-            if state['stop_loss'] > float(last_trade[-1]['price']) or state['take_profit'] < float(last_trade[-1]['price']):
+            if state['stop_loss'] > last_price or state['take_profit'] < last_price:
                 decision = 'sell'
 
             if decision == 'sell':
-                logging.info('Selling %f of %s at %f', state['quantity'], param_data['symbol'], last_trade[-1]['price'])
+                logging.info('Selling %f of %s at %f', state['quantity'], param_data['symbol'], last_price)
                 # place order
                 try:
                     # order = client.order_market_sell(symbol=param_data['symbol'], quantity=state['quantity'])
-                    pass
                 except (BinanceRequestException, BinanceAPIException, BinanceOrderException) as err:
                     logging.error('Error when placing order: %s', err)
                     time.sleep(5)
@@ -149,10 +157,10 @@ if __name__ == "__main__":
 
                 # Checking if order is filled
                 while order['status'] != 'FILLED':
-                    logger.info('Order %s not filled: %s, waiting...', order['orderId'], order['status'])
+                    logging.info('Order %d not filled: %s, waiting...', order['orderId'], order['status'])
                     try:
-                        order = client.get_order(symbol=symbol=param_data['symbol'], orderId=order['orderId'])
-                    except (BinanceRequestException, BinanceAPIException) as Err:
+                        order = client.get_order(symbol=param_data['symbol'], orderId=order['orderId'])
+                    except (BinanceRequestException, BinanceAPIException) as err:
                         logging.error('Error when checking order: %s', err)
                     time.sleep(1)
 
@@ -161,9 +169,9 @@ if __name__ == "__main__":
                 state['quantity'] = 0.0   #?
                 state['take_profit'] = 0.0
                 state['stop_loss'] = 0.0
-                logger.info('%f sold at %f - order n:%s', quantity_sold, exit_price, order['orderId'])
+                logging.info('%f sold at %f - order n:%d', quantity_sold, exit_price, order['orderId'])
 
-                message = 'Sold ' + str(quantity_sold) + ' ' + param_data['symbol'] + ' at ' + exit_price
+                message = 'Sold ' + str(quantity_sold) + ' ' + param_data['symbol'] + ' at ' + str(exit_price)
                 try:
                     bot.sendMessage(chat_id=telegram_chat_id, text=message)
                 except telegram.error.TelegramError as err:
