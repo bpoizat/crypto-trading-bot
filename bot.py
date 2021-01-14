@@ -11,6 +11,7 @@ import csv
 #       data = get_data(config_binance, param_data)
 from binance.client import Client
 from binance.exceptions import BinanceRequestException, BinanceAPIException, BinanceOrderException
+from requests.exceptions import ReadTimeout
 
 from binance_data import get_data, get_last_trade
 from indicators import calculate_indicators
@@ -88,7 +89,7 @@ if __name__ == "__main__":
         # Get data from binance
         try:
             data = get_data(client, param_data)
-        except (BinanceRequestException, BinanceAPIException) as err:
+        except (BinanceRequestException, BinanceAPIException, ReadTimeout) as err:
             logging.error('Error when retrieving data: %s', err)
             time.sleep(5)
             continue
@@ -104,19 +105,19 @@ if __name__ == "__main__":
             # getting the last price
             try:
                 last_trade = get_last_trade(client, param_data)
-            except (BinanceRequestException, BinanceAPIException) as err:
+            except (BinanceRequestException, BinanceAPIException, ReadTimeout) as err:
                 logging.error('Error when retrieving data: %s', err)
                 time.sleep(5)
                 continue
             last_price = float(last_trade[-1]['price'])
 
             # calculating quantity of coins to buy
-            quantityToOrder = round(money/last_price, 2)
+            quantityToOrder = round(money/last_price, 5)
             logging.info('Ordering %f of %s at %f', quantityToOrder, param_data['symbol'], last_price)
 
             # place order
             try:
-                # order = client.order_market_buy(symbol=param_data['symbol'], quantity=quantityToOrder)
+                order = client.order_market_buy(symbol=param_data['symbol'], quantity=quantityToOrder)
                 pass
             except (BinanceRequestException, BinanceAPIException, BinanceOrderException) as err:
                 logging.error('Error when placing order: %s', err)
@@ -129,11 +130,11 @@ if __name__ == "__main__":
                 logging.info('Order %d not filled: %s, waiting...', order['orderId'], order['status'])
                 try:
                     order = client.get_order(symbol=param_data['symbol'], orderId=order['orderId'])
-                except (BinanceRequestException, BinanceAPIException) as err:
+                except (BinanceRequestException, BinanceAPIException, ReadTimeout) as err:
                     logging.error('Error when checking order: %s', err)
                 time.sleep(1)
 
-            entry_price = float(order['price'])
+            entry_price = float(order['cummulativeQuoteQty'])/float(order['executedQty'])
             state['quantity'] = float(order['executedQty'])
             state['stop_loss'] = entry_price - (entry_price*float(param_strategy['stop_loss']))
             state['take_profit'] = entry_price + (entry_price*float(param_strategy['take_profit']))
@@ -162,7 +163,7 @@ if __name__ == "__main__":
             # getting the last price
             try:
                 last_trade = get_last_trade(client, param_data)
-            except (BinanceRequestException, BinanceAPIException) as err:
+            except (BinanceRequestException, BinanceAPIException, ReadTimeout) as err:
                 logging.error('Error when retrieving data: %s', err)
                 time.sleep(5)
                 continue
@@ -176,8 +177,8 @@ if __name__ == "__main__":
                 logging.info('Selling %f of %s at %f', state['quantity'], param_data['symbol'], last_price)
                 # place order
                 try:
-                    # order = client.order_market_sell(symbol=param_data['symbol'], quantity=state['quantity'])
-                except (BinanceRequestException, BinanceAPIException, BinanceOrderException) as err:
+                    order = client.order_market_sell(symbol=param_data['symbol'], quantity=state['quantity'])
+                except (BinanceRequestException, BinanceAPIException, BinanceOrderException, ReadTimeout) as err:
                     logging.error('Error when placing order: %s', err)
                     time.sleep(5)
                     continue
@@ -188,11 +189,11 @@ if __name__ == "__main__":
                     logging.info('Order %d not filled: %s, waiting...', order['orderId'], order['status'])
                     try:
                         order = client.get_order(symbol=param_data['symbol'], orderId=order['orderId'])
-                    except (BinanceRequestException, BinanceAPIException) as err:
+                    except (BinanceRequestException, BinanceAPIException, ReadTimeout) as err:
                         logging.error('Error when checking order: %s', err)
                     time.sleep(1)
 
-                exit_price = float(order['price'])
+                exit_price = float(order['cummulativeQuoteQty'])/float(order['executedQty'])
                 quantity_sold = float(order['executedQty'])
                 if quantity_sold != state['quantity']:
                     logger.warning('Quantity sold different than quantity bought, UNEXPECTED')

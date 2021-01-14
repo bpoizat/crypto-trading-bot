@@ -21,10 +21,15 @@ def strategy1(indicators, param_strategy, buy_order_placed):
             # negative trend and overbought, go short
             return 'sell'
         else:
+            logging.debug('macdh_slope[-1]: %f and rsi[-1]:%f => NOTHING', macdh_slope[-1], rsi[-1])
             return 'none'
     elif buy_order_placed == True:
         # we have some coins waiting to be sold
         if rsi[-1] > int(param_strategy['rsi_high_limit']):
             # overbought, sell
             logging.info('%f > %f => SELLING what we have', rsi[-1], float(param_strategy['rsi_high_limit']))
+            return 'sell'
+        if macdh_slope[-1] < 0:
+            # negative trend, sell
+            logging.info('%f < 0 => SELLING what we have', macdh_slope[-1])
             return 'sell'
