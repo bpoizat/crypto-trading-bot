@@ -123,7 +123,7 @@ if __name__ == "__main__":
                 logging.error('Error when placing order: %s', err)
                 time.sleep(5)
                 continue
-            print(order)
+            logging.debug(order)
 
             # Checking if order is filled
             while order['status'] != 'FILLED':   # Timeout?
@@ -170,19 +170,33 @@ if __name__ == "__main__":
             last_price = float(last_trade[-1]['price'])
             
             # if we hit the stop loss or the take profit
-            if state['stop_loss'] > last_price or state['take_profit'] < last_price:
+            if last_price < state['stop_loss']:
                 decision = 'sell'
+                logging.info('Hitting stop_loss, selling...')
+            
+            # if we hit the take profit, we might continue
+            elif last_price > state['take_profit']:
+                # if we would buy again, don't sell and raise take_profit/stop_loss
+                if strategy1(indicators, param_strategy, False) == 'buy':
+                    # take_profit increases by half the percentage
+                    state['stop_loss'] = state['take_profit']
+                    state['take_profit'] = state['take_profit']*(1+float(param_strategy['take_profit'])/2)
+                    logging.info('Hitting take_profit, increasing take_profit to %f and stop_loss to %f...', state['take_profit'], state['stop_loss'])
+                else:
+                    decision = 'sell'
+                    logging.info('Hitting take_profit, trend not as good, leaving the trade')
 
             if decision == 'sell':
                 logging.info('Selling %f of %s at %f', state['quantity'], param_data['symbol'], last_price)
                 # place order
                 try:
                     order = client.order_market_sell(symbol=param_data['symbol'], quantity=state['quantity'])
+                    pass
                 except (BinanceRequestException, BinanceAPIException, BinanceOrderException, ReadTimeout) as err:
                     logging.error('Error when placing order: %s', err)
                     time.sleep(5)
                     continue
-                print(order)
+                logging.debug(order)
 
                 # Checking if order is filled
                 while order['status'] != 'FILLED':
@@ -208,7 +222,7 @@ if __name__ == "__main__":
                 trade['bilan'] = trade['money_earned'] - trade['money_spent']
                 save_trade(trade)
 
-                message = 'Sold ' + str(quantity_sold) + ' ' + param_data['symbol'] + ' at ' + str(exit_price)
+                message = 'Sold ' + str(quantity_sold) + ' ' + param_data['symbol'] + ' at ' + str(exit_price) + '\nBilan = ' + str(trade['bilan'])
                 try:
                     bot.sendMessage(chat_id=telegram_chat_id, text=message)
                 except telegram.error.TelegramError as err:
