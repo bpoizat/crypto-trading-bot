@@ -16,6 +16,7 @@ from requests.exceptions import ReadTimeout
 from binance_data import get_data, get_last_trade
 from indicators import calculate_indicators
 from strategy import *
+from decision import Decision
 
 def read_state():
     state = {}
@@ -33,7 +34,8 @@ def fake_order(price, qty):
         'status': 'FILLED',
         'orderId': 15,
         'price': str(price),
-        'executedQty': qty
+        'executedQty': qty,
+        'cummulativeQuoteQty': price*qty
     }
 
 def save_trade(trade):
@@ -54,7 +56,7 @@ def save_trade(trade):
 if __name__ == "__main__":
 
     # Logging
-    logging.basicConfig(filename='bot.log', encoding='utf-8', format='%(asctime)s %(levelname)s: %(message)s', level=logging.DEBUG)
+    logging.basicConfig(filename='bot.log', format='%(asctime)s %(levelname)s: %(message)s', level=logging.DEBUG)
     logging.info('Starting bot')
 
     # Read config file
@@ -101,7 +103,7 @@ if __name__ == "__main__":
         decision = strategy1(indicators, param_strategy, state['buy_status'])
 
         # No trade going on, we decide to enter long
-        if not state['buy_status'] and decision == 'buy':
+        if not state['buy_status'] and decision is Decision.BUY:
             # getting the last price
             try:
                 last_trade = get_last_trade(client, param_data)
@@ -139,7 +141,7 @@ if __name__ == "__main__":
             state['stop_loss'] = entry_price - (entry_price*float(param_strategy['stop_loss']))
             state['take_profit'] = entry_price + (entry_price*float(param_strategy['take_profit']))
             logging.info('%f purchased at %f - order n:%d', state['quantity'], entry_price, order['orderId'])
-            logging.debug('Stop loss set at %f, take profit at %f', state['stop_loss'], state['take_profit'])
+            logging.info('Stop loss set at %f, take profit at %f', state['stop_loss'], state['take_profit'])
 
             # recording trade
             trade = {
@@ -171,22 +173,22 @@ if __name__ == "__main__":
             
             # if we hit the stop loss or the take profit
             if last_price < state['stop_loss']:
-                decision = 'sell'
+                decision = Decision.SELL
                 logging.info('Hitting stop_loss, selling...')
             
             # if we hit the take profit, we might continue
             elif last_price > state['take_profit']:
                 # if we would buy again, don't sell and raise take_profit/stop_loss
-                if strategy1(indicators, param_strategy, False) == 'buy':
+                if strategy1(indicators, param_strategy, False) is Decision.BUY:
                     # take_profit increases by half the percentage
                     state['stop_loss'] = state['take_profit']
                     state['take_profit'] = state['take_profit']*(1+float(param_strategy['take_profit'])/2)
                     logging.info('Hitting take_profit, increasing take_profit to %f and stop_loss to %f...', state['take_profit'], state['stop_loss'])
                 else:
-                    decision = 'sell'
+                    decision = Decision.SELL
                     logging.info('Hitting take_profit, trend not as good, leaving the trade')
 
-            if decision == 'sell':
+            if decision is Decision.SELL:
                 logging.info('Selling %f of %s at %f', state['quantity'], param_data['symbol'], last_price)
                 # place order
                 try:
@@ -238,7 +240,7 @@ if __name__ == "__main__":
                     logging.info('Lost %d, stopping the bot', bilan)
                     isRunning = False
 
-        elif decision == 'sell':
+        elif decision is Decision.SELL:
             print('todo')
 
         time.sleep(10)

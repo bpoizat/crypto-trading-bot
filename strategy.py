@@ -1,5 +1,7 @@
 import logging
 
+from decision import Decision
+
 def strategy1(indicators, param_strategy, buy_order_placed):
     # Triple screen
 
@@ -15,11 +17,11 @@ def strategy1(indicators, param_strategy, buy_order_placed):
         if macdh_slope[-1] > 0 and rsi[-1] < float(param_strategy['rsi_low_limit']):
             logging.info('%f > 0 and %f < %f => BUYING', macdh_slope[-1], rsi[-1], float(param_strategy['rsi_low_limit']))
             # positive trend and oversold, go long
-            return 'buy'
+            return Decision.BUY
         elif macdh_slope[-1] < 0 and rsi[-1] > float(param_strategy['rsi_high_limit']):
             logging.debug('%f < 0 and %f > %f => SELLING', macdh_slope[-1], rsi[-1], float(param_strategy['rsi_high_limit']))
             # negative trend and overbought, go short
-            return 'sell'
+            return Decision.SELL
         else:
             logging.debug('macdh_slope[-1]: %f and rsi[-1]:%f => NOTHING', macdh_slope[-1], rsi[-1])
             return 'none'
@@ -28,8 +30,8 @@ def strategy1(indicators, param_strategy, buy_order_placed):
         if rsi[-1] > int(param_strategy['rsi_high_limit']):
             # overbought, sell
             logging.info('%f > %f => SELLING what we have', rsi[-1], float(param_strategy['rsi_high_limit']))
-            return 'sell'
+            return Decision.SELL
         if macdh_slope[-1] < 0:
             # negative trend, sell
             logging.info('%f < 0 => SELLING what we have', macdh_slope[-1])
-            return 'sell'
+            return Decision.SELL
