@@ -22,12 +22,12 @@ def calculate_indicators(data, param_indicators):
     # First screen: long timeframe trend, here it's the slope of the macdh
     # matype=1 is for exponential
     macd, macdsignal, macdhist = abstract.MACDEXT(long_inputs, 
-                                                  fastperiod=int(param_indicators['macd_fast']), fastmatype=1,
-                                                  slowperiod=int(param_indicators['macd_slow']), slowmatype=1,
-                                                  signalperiod=int(param_indicators['macd_signal']), signalmatype=1)
+                                                  fastperiod=param_indicators['macd_fast'], fastmatype=1,
+                                                  slowperiod=param_indicators['macd_slow'], slowmatype=1,
+                                                  signalperiod=param_indicators['macd_signal'], signalmatype=1)
 
     # Second screen: intermediate timeframe, oscillator
-    rsi = abstract.RSI(short_inputs, timeperiod=int(param_indicators['rsi_period']))
+    rsi = abstract.RSI(short_inputs, timeperiod=param_indicators['rsi_period'])
 
     indicators = {
         'macdhist': macdhist,
