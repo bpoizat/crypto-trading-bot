@@ -131,7 +131,6 @@ def exit_long_trade(symbol, state):
     state['take_profit'] = 0.0
     state['stop_loss'] = 0.0
     state['buy_status'] = False
-    state['trade'] = {}
     write_state(state)
 
     # Sending telegram message

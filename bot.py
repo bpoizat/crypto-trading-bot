@@ -83,7 +83,7 @@ if __name__ == "__main__":
                     continue
 
                 # Money won or lost since start of the bot
-                bilan += trade['bilan']
+                bilan += state['trade']['bilan']
                 logging.info('Bilan since start of this session is: %f', bilan)
                 # If we lost too much money, we stop the bot
                 if bilan < switchoff*money*-1:
