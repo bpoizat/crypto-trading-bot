@@ -60,8 +60,8 @@ def wait_order_filled(order, symbol):
 # Place market order
 def place_marker_order(decision, symbol, quantity):
     if decision is Decision.BUY:
-        order = order_market_buy(symbol=symbol, quantity=quantity)
+        order = client.order_market_buy(symbol=symbol, quantity=quantity)
     elif decision is Decision.SELL:
-        order = order_market_sell(symbol=symbol, quantity=quantity)
+        order = client.order_market_sell(symbol=symbol, quantity=quantity)
 
     return order

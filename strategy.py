@@ -58,6 +58,13 @@ def exit_trade(symbol, state, indicators, p_strategy):
     except Exception:
         raise
 
+    # Long timeframe: long timeframe, slope of MACDH
+    macdh = indicators['macdhist']
+    macdh_slope = [macdh[x] - macdh[x-1] for x in range(1, len(macdh))]
+
+    # Short timeframe: oscillator, RSI
+    rsi = indicators['rsi']
+
     if decision is Decision.NONE:
         # We didn't hit take_profit or stop_loss
         if rsi[-1] > p_strategy['rsi_high_limit']:

@@ -2,9 +2,6 @@
 
 import logging
 import time
-# from linetimer import CodeTimer # to profile and optimize, example:
-# with CodeTimer('getting data'):
-#       data = get_data(config_binance, param_data)
 
 from indicators import calculate_indicators
 import strategy

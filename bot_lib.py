@@ -9,7 +9,6 @@ from bot_io.trade_recording import save_trade
 import bot_io.telegram_bot as telegram_bot
 from test_helper import fake_order
 
-
 # Initialize the API, logging, general IO
 def init_bot():
     # Read config file
@@ -83,14 +82,16 @@ def enter_trade_buy(symbol, money, p_stop_loss, p_take_profit):
     entry_price = money_spent/quantity
 
     # Updating state
-    state['quantity'] = quantity
-    state['stop_loss'] = entry_price*(1-p_stop_loss)
-    state['take_profit'] = entry_price*(1+p_take_profit)
-    state['buy_status'] = True
-    state['trade'] = {
-        'entry_price': entry_price,
+    state = {
+        'buy_status': True,
         'quantity': quantity,
-        'money_spent': money_spent,
+        'stop_loss': entry_price*(1-p_stop_loss),
+        'take_profit': entry_price*(1+p_take_profit),
+        'trade': {
+            'entry_price': entry_price,
+            'quantity': quantity,
+            'money_spent': money_spent,
+        }
     }
     write_state(state)
 
