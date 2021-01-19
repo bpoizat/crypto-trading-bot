@@ -66,12 +66,19 @@ if __name__ == "__main__":
 
         # Long trade going on, we are long
         elif state['buy_status']:
+            # getting the last price
             try:
-                decision = strategy.exit_trade(symbol, state, indicators, p_strategy)
+                last_price = get_last_price(symbol)
             except Exception as err:
                 logging.error('Error when deciding to exit trade: %s', err)
                 time.sleep(5)
                 continue
+
+            # First we check if we hit the stop loss or take profit threshold
+            decision = check_sloss_tprofit(symbol, state, indicators, p_strategy)
+            # If not, we check what the strategy says
+            if decision is Decision.NONE:
+                decision = strategy.exit_trade(indicators, p_strategy)
 
             # Exit the trade by shorting
             if decision is Decision.SELL:

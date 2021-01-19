@@ -49,3 +49,10 @@ def read_param():
     logging.debug('Stop_loss=%f, take_profit=%f, money=%f, switchoff=%f', stop_loss, take_profit, money, switchoff)
 
     return symbol, timeframes, p_indicators, p_strategy, stop_loss, take_profit, money, switchoff
+
+# read the backtest config file
+def read_backtest_param():
+    config = configparser.ConfigParser()
+    config.read('backtest.ini')
+
+    return config

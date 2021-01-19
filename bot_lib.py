@@ -8,6 +8,7 @@ from bot_io.state import write_state
 from bot_io.trade_recording import save_trade
 import bot_io.telegram_bot as telegram_bot
 from test_helper import fake_order
+import strategy
 
 # Initialize the API, logging, general IO
 def init_bot():
@@ -139,3 +140,22 @@ def exit_long_trade(symbol, state):
 
     logging.info('%f sold at %f - order n:%d', quantity_sold, exit_price, order['orderId'])
     return state
+
+# Check if we hit the stop loss or take profit price
+def check_sloss_tprofit(last_price, state, indicators, p_strategy):
+    decision = Decision.NONE
+
+    # if we hit the stop loss
+    if last_price < state['stop_loss']:
+        decision = Decision.SELL
+        logging.info('Hitting stop_loss, selling...')
+
+    # if we hit the take profit, we might continue
+    elif last_price > state['take_profit']:
+        # if we would buy again, don't sell and raise take_profit/stop_loss
+        if strategy.enter_trade(indicators, p_strategy) is Decision.BUY:
+            decision = Decision.BUY
+        else:
+            decision = Decision.SELL
+            logging.info('Hitting take_profit, trend not as good, leaving the trade')
+    return decision
