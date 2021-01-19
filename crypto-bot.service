@@ -1,0 +1,14 @@
+[Unit]
+Description=Crypto trading bot
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 -u bot.py
+WorkingDirectory=/home/bastien/bot-crypto
+StandardOutput=inherit
+StandardError=inherit
+Restart=on-failure
+User=bastien
+
+[Install]
+WantedBy=multi-user.target

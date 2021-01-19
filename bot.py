@@ -106,4 +106,5 @@ if __name__ == "__main__":
 
         time.sleep(10)
 
-
+    logging.info('Stopping the bot!')
+    telegram_bot.send_message('Bot stopped correctly!')
