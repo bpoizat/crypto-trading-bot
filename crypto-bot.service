@@ -8,7 +8,9 @@ WorkingDirectory=/home/bastien/bot-crypto
 StandardOutput=inherit
 StandardError=inherit
 Restart=on-failure
+RestartSec=10
 User=bastien
+TimeoutStopSec=120
 
 [Install]
 WantedBy=multi-user.target

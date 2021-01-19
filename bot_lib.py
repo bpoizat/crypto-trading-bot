@@ -1,6 +1,7 @@
 # General purpose functions used by the bot
 
 import logging
+import signal
 
 from exchange_api import *
 from bot_io.config import read_config
@@ -159,3 +160,15 @@ def check_sloss_tprofit(last_price, state, indicators, p_strategy):
             decision = Decision.SELL
             logging.info('Hitting take_profit, trend not as good, leaving the trade')
     return decision
+
+
+# Class to handle SIGTERM signals so the bot doesn't stop in the middle of something important
+class BotKiller:
+    kill_now = False
+
+    def __init__(self):
+        signal.signal(signal.SIGTERM, self.exit_gracefully)
+        signal.signal(signal.SIGINT, self.exit_gracefully)
+
+    def exit_gracefully(self, signum, frame):
+        self.kill_now = True
