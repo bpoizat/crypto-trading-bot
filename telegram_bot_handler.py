@@ -37,7 +37,7 @@ if __name__ == '__main__':
 
     # Initializing telegrame bot
     updater = Updater(config['Telegram']['token_id'])
-    dp = updater.dispatcher()
+    dp = updater.dispatcher
 
     # Commands
     dp.add_handler(CommandHandler('start', start))
