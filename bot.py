@@ -17,6 +17,9 @@ if __name__ == "__main__":
 
     init_bot()
 
+    # used to wait end of loop to kill the bot
+    bot_killer = BotKiller()
+
     # reading all parameters
     symbol, tf, p_indicators, p_strategy, p_stop_loss, p_take_profit, money, switchoff = read_param()
 
@@ -34,7 +37,7 @@ if __name__ == "__main__":
 
     telegram_bot.send_message('Bot started correctly!')
 
-    while isRunning:
+    while isRunning and not bot_killer.kill_now:
         # Get data from binance
         try:
             data = get_data(symbol, tf)
@@ -66,12 +69,19 @@ if __name__ == "__main__":
 
         # Long trade going on, we are long
         elif state['buy_status']:
+            # getting the last price
             try:
-                decision = strategy.exit_trade(symbol, state, indicators, p_strategy)
+                last_price = get_last_price(symbol)
             except Exception as err:
                 logging.error('Error when deciding to exit trade: %s', err)
                 time.sleep(5)
                 continue
+
+            # First we check if we hit the stop loss or take profit threshold
+            decision = check_sloss_tprofit(last_price, state, indicators, p_strategy)
+            # If not, we check what the strategy says
+            if decision is Decision.NONE:
+                decision = strategy.exit_trade(indicators, p_strategy)
 
             # Exit the trade by shorting
             if decision is Decision.SELL:
@@ -99,4 +109,5 @@ if __name__ == "__main__":
 
         time.sleep(10)
 
-
+    logging.info('Stopping the bot!')
+    telegram_bot.send_message('Bot stopped correctly!')
