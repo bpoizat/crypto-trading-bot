@@ -15,7 +15,7 @@ def start(update, context):
         'org.freedesktop.systemd1.Manager'
     )
 
-    manager.StartService('crypto-bot.service', 'replace')
+    manager.StartUnit('crypto-bot.service', 'replace')
 
 def stop(update, context):
     system_bus = dbus.SystemBus()
@@ -29,7 +29,7 @@ def stop(update, context):
         'org.freedesktop.systemd1.Manager'
     )
 
-    manager.StopService('crypto-bot.service', 'replace')
+    manager.StopUnit('crypto-bot.service', 'replace')
 
 
 if __name__ == '__main__':

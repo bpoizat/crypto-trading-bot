@@ -75,7 +75,7 @@ if __name__ == "__main__":
                 continue
 
             # First we check if we hit the stop loss or take profit threshold
-            decision = check_sloss_tprofit(symbol, state, indicators, p_strategy)
+            decision = check_sloss_tprofit(last_price, state, indicators, p_strategy)
             # If not, we check what the strategy says
             if decision is Decision.NONE:
                 decision = strategy.exit_trade(indicators, p_strategy)
