@@ -21,7 +21,8 @@ if __name__ == "__main__":
     bot_killer = BotKiller()
 
     # reading all parameters
-    symbol, tf, p_indicators, p_strategy, p_stop_loss, p_take_profit, money, switchoff = read_param()
+    symbol, tf, p_indicators, p_strategy = read_param()
+    p_stop_loss, p_take_profit, money, switchoff = p_strategy['stop_loss'], p_strategy['take_profit'], p_strategy['money'], p_strategy['switchoff'],
 
     # read saved state
     state = read_state()
@@ -103,8 +104,8 @@ if __name__ == "__main__":
             # here buy means increasing stop_loss and take_profit
             elif decision is Decision.BUY:
                 # take_profit increases by half the percentage
-                state['stop_loss'] = state['take_profit']
-                state['take_profit'] = state['take_profit']*(1+p_take_profit/2)
+                state['stop_loss'] = state['take_profit']*(1-p_stop_loss)
+                state['take_profit'] = state['take_profit']*(1+p_take_profit)
                 logging.info('Hitting take_profit, increasing take_profit to %f and stop_loss to %f...', state['take_profit'], state['stop_loss'])
 
         time.sleep(10)

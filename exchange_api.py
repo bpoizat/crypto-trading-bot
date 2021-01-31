@@ -31,8 +31,7 @@ def get_klines(symbol, interval, start):
 # Get klines fortimeframes
 def get_data(symbol, tf):
     data = {
-        'long_tf': get_klines(symbol, tf['l_interval'], tf['l_start']),
-        'short_tf': get_klines(symbol, tf['s_interval'], tf['s_start'])
+        'tf': get_klines(symbol, tf['interval'], tf['start']),
     }
 
     return data
