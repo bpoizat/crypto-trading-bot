@@ -4,21 +4,16 @@ from decision import Decision
 
 # Decide if we enter a trade or not
 def enter_trade(indicators, p_strategy):
-    # Long timeframe: long timeframe, slope of MACDH
-    macdh = indicators['macdhist']
-    macdh_slope = [macdh[x] - macdh[x-1] for x in range(1, len(macdh))]
+    slow_ema = indicators['slow_ema']
+    fast_ema = indicators['fast_ema']
 
-    # Short timeframe: oscillator, RSI
-    rsi = indicators['rsi']
-
-    # possible tweaks: take slope on more points
-    if macdh_slope[-1] > 0 and rsi[-1] < p_strategy['rsi_low_limit']:
-        logging.info('%f > 0 and %f < %f => BUYING', macdh_slope[-1], rsi[-1], p_strategy['rsi_low_limit'])
-        # positive trend and oversold, go long
+    if slow_ema[-1] < fast_ema[-1]:
+        # logging.info('%f > 0 and %f < %f => BUYING', macdh_slope[-1], rsi[-1], p_strategy['rsi_low_limit'])
+        # positive trend, go long
         return Decision.BUY
-    elif macdh_slope[-1] < 0 and rsi[-1] > p_strategy['rsi_high_limit']:
-        logging.info('%f < 0 and %f > %f => SELLING', macdh_slope[-1], rsi[-1], p_strategy['rsi_high_limit'])
-        # negative trend and overbought, go short
+    elif slow_ema[-1] > fast_ema[-1]:
+        # logging.info('%f < 0 and %f > %f => SELLING', macdh_slope[-1], rsi[-1], p_strategy['rsi_high_limit'])
+        # negative trend, go short
         return Decision.SELL
     else:
         return Decision.NONE
@@ -26,21 +21,10 @@ def enter_trade(indicators, p_strategy):
 
 # Decide if we want to exit the trade
 def exit_trade(indicators, p_strategy):
-    # Long timeframe: long timeframe, slope of MACDH
-    macdh = indicators['macdhist']
-    macdh_slope = [macdh[x] - macdh[x-1] for x in range(1, len(macdh))]
+    slow_ema = indicators['slow_ema']
+    fast_ema = indicators['fast_ema']
 
-    # Short timeframe: oscillator, RSI
-    rsi = indicators['rsi']
-
-    # We didn't hit take_profit or stop_loss
-    if rsi[-1] > p_strategy['rsi_high_limit']:
-        # overbought, sell
-        logging.info('%f > %f => SELLING what we have', rsi[-1], p_strategy['rsi_high_limit'])
+    if slow_ema[-1] > fast_ema[-1]:
         return Decision.SELL
-    # if macdh_slope[-1] < 0:
-    #     # negative trend, sell
-    #     logging.info('%f < 0 => SELLING what we have', macdh_slope[-1])
-    #     return Decision.SELL
-    
+
     return Decision.NONE
