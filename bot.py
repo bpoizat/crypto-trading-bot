@@ -8,7 +8,7 @@ import strategy
 from decision import Decision
 
 from bot_io.config import read_param
-from bot_io.state import read_state
+from bot_io.state import read_state, write_state
 import bot_io.telegram_bot as telegram_bot
 
 from bot_lib import *
@@ -106,6 +106,7 @@ if __name__ == "__main__":
                 # take_profit increases by half the percentage
                 state['stop_loss'] = state['take_profit']*(1-p_stop_loss)
                 state['take_profit'] = state['take_profit']*(1+p_take_profit)
+                write_state(state)
                 logging.info('Hitting take_profit, increasing take_profit to %f and stop_loss to %f...', state['take_profit'], state['stop_loss'])
 
         time.sleep(10)

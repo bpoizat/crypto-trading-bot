@@ -64,3 +64,22 @@ def place_marker_order(decision, symbol, quantity):
         order = client.order_market_sell(symbol=symbol, quantity=quantity)
 
     return order
+
+
+# Get symbol info
+def get_symbol_info(symbol):
+    return client.get_symbol_info(symbol)
+
+
+# Get list of symbols
+def get_symbol_list(filter):
+    # get list of all symbols
+    exchange_info = client.get_exchange_info()
+    symbol_info = exchange_info['symbols']
+    symbol_list = [x['symbol'] for x in symbol_info]
+    print('Number of symbols found: ' + str(len(symbol_list)))
+
+    # Filter to keep only USDT
+    symbols = [x for x in symbol_list if filter in x]
+    print('Number of USDT pair found: ' + str(len(symbols)))
+    return symbols
