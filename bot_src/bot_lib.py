@@ -3,13 +3,13 @@
 import logging
 import signal
 
-from exchange_api import *
+from bot_src.exchange_api import *
+from bot_src.test_helper import fake_order
+import bot_src.strategy
 from bot_io.config import read_config
 from bot_io.state import write_state
 from bot_io.trade_recording import save_trade
 import bot_io.telegram_bot as telegram_bot
-from test_helper import fake_order
-import strategy
 
 # Initialize the API, logging, general IO
 def init_bot():
@@ -60,7 +60,6 @@ def sell(symbol, quantity):
     # place order
     try:
         order = place_marker_order(Decision.SELL, symbol, quantity)
-        pass
     except Exception:
         raise
     logging.debug(order)

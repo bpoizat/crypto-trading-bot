@@ -1,6 +1,6 @@
 import logging
 
-from decision import Decision
+from bot_src.decision import Decision
 
 # Decide if we enter a trade or not
 def enter_trade(indicators, p_strategy):

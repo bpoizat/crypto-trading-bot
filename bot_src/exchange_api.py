@@ -3,7 +3,7 @@
 from binance.client import Client
 import logging
 
-from decision import Decision
+from bot_src.decision import Decision
 
 # data sent back when calling get_klines
 columns_klines = ['Open_time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Close_time', 'Quote_asset_volume',
@@ -55,6 +55,7 @@ def wait_order_filled(order, symbol):
         except Exception as err:
             logging.error('Error when checking order: %s', err)
         time.sleep(1)
+
 
 # Place market order
 def place_marker_order(decision, symbol, quantity):

@@ -6,12 +6,12 @@ import csv
 import numpy as np
 from tqdm.contrib.concurrent import process_map
 
-from exchange_api import columns_klines
-from indicators import calculate_indicators
+from bot_src.exchange_api import columns_klines, get_symbol_list, init_client
+from bot_src.indicators import calculate_indicators
+from bot_src import strategy
 from bot_io.config import *
-import strategy
 
-from decision import Decision
+from bot_src.decision import Decision
 
 full_data = []
 p_strategy = {}
@@ -64,19 +64,7 @@ def parallel_extraction():
     config = read_config()
     config_binance = config['Binance']
 
-    # create binance client
-    client = Client(config_binance['api_key'], config_binance['api_secret'])
-    client.ping()
-
-    # get list of all symbols
-    exchange_info = client.get_exchange_info()
-    symbol_info = exchange_info['symbols']
-    symbol_list = [x['symbol'] for x in symbol_info]
-    print('Number of symbols found: ' + str(len(symbol_list)))
-
-    # Filter to keep only USDT
-    symbols = [x for x in symbol_list if 'USDT' in x]
-    print('Number of USDT pair found: ' + str(len(symbols)))
+    symbols = get_symbol_list('USDT')
     print(symbols)
 
     print('Backtesting...')
@@ -128,6 +116,13 @@ def backtest_loop(list_param):
     p_strategy = list_param['p_strategy']
     money = p_strategy['money']
     fee = list_param['fee']
+
+    # get data
+    full_data = get_data_from_csv(config_bt['Backtest']['path'], symbol, tf['interval'])
+
+    # print(len(full_data))
+    # if (len(full_data['tf']) < 30):
+    #     return {}
 
     # Calculate indicators
     indicators = calculate_indicators(full_data, p_indicators)
@@ -224,7 +219,7 @@ def backtest_loop(list_param):
     
     number_trade = positive_trade + negative_trade
     benefits -= fees
-
+    # print(result)
     result = {
         'stop_loss': p_stop_loss,
         'take_profit': p_take_profit,
@@ -239,46 +234,56 @@ def backtest_loop(list_param):
 
 
 if __name__ == '__main__':
+    # Read config file
+    config = read_config()
+    config_binance = config['Binance']
+
     # Read backtest config file
     config_bt = read_backtest_param()
 
     # reading all parameters
-    symbol, tf, p_indicators, p_strategy = read_param()
+    _, tf, p_indicators, p_strategy = read_param()
 
-    full_data = get_data_from_csv(config_bt['Backtest']['path'], symbol, tf['interval'])
     results = []
+
+    init_client(config_binance['api_key'], config_binance['api_secret'])
+    # symbols = get_symbol_list('USDT')
+    symbols = ["BATUSDT"]
 
     # multithread version
     list_param = []
-    for stop_loss in np.arange(0.02, 0.11, 0.01):
-        for take_profit in np.arange(0.02, 0.11, 0.01):
-            for slow_ema in range(15, 25, 1):
-                for fast_ema in range(5, 15, 1):
-                    list_param.append({
-                        'stop_loss': stop_loss,
-                        'take_profit': take_profit,
-                        'slow_ema': slow_ema,
-                        'fast_ema': fast_ema,
-                        'symbol': symbol,
-                        'p_strategy': p_strategy,
-                        'fee': float(config_bt['Backtest']['fee']),
-                    })
+    for symbol in symbols:
+        list_param = []
+        for stop_loss in np.arange(0.02, 0.11, 0.01):
+            for take_profit in np.arange(0.02, 0.11, 0.01):
+                for slow_ema in range(12, 25, 1):
+                    for fast_ema in range(3, 15, 1):
+                        list_param.append({
+                            'stop_loss': stop_loss,
+                            'take_profit': take_profit,
+                            'slow_ema': slow_ema,
+                            'fast_ema': fast_ema,
+                            'symbol': symbol,
+                            'p_strategy': p_strategy,
+                            'fee': float(config_bt['Backtest']['fee']),
+                        })
 
-    print('Backtesting...')
-    results = process_map(backtest_loop, list_param, max_workers=12, chunksize=12)
-    # print(results)
+        print('Backtesting', symbol)
+        results = process_map(backtest_loop, list_param, max_workers=12, chunksize=12)
+        # print(results)
+        if results == {}:
+            continue
+        # Write results to CSV
+        folder = os.path.join(config_bt['Backtest']['path_result'], symbol)
+        if not os.path.isdir(folder):
+            os.mkdir(folder)
+        filename = os.path.join(folder, tf['interval'])
+        filename += '.csv'
 
-    # Write results to CSV
-    folder = os.path.join(config_bt['Backtest']['path_result'], symbol)
-    if not os.path.isdir(folder):
-        os.mkdir(folder)
-    filename = os.path.join(folder, tf['interval'])
-    filename += '.csv'
+        with open(filename, 'w', newline='') as f:
+            fieldnames = ['stop_loss', 'take_profit', 'slow_ema', 'fast_ema', 'number_trade', 'positive_trade', 'negative_trade', 'benefits']
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
 
-    with open(filename, 'w', newline='') as f:
-        fieldnames = ['stop_loss', 'take_profit', 'slow_ema', 'fast_ema', 'number_trade', 'positive_trade', 'negative_trade', 'benefits']
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-
-        writer.writeheader()
-        for row in results:
-            writer.writerow(row)
+            writer.writeheader()
+            for row in results:
+                writer.writerow(row)

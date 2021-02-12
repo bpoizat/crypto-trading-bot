@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 ExecStart=/usr/bin/python3 -u telegram_bot_handler.py
-WorkingDirectory=/home/bastien/bot-crypto
+WorkingDirectory=/home/bastien/bot-crypto/telegram_bot
 StandardOutput=inherit
 StandardError=inherit
 Restart=always

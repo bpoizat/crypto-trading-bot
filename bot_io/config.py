@@ -6,14 +6,14 @@ import logging
 # read the configuration file
 def read_config():
     config = configparser.ConfigParser()
-    config.read('config.ini')
+    config.read('ini_files/config.ini')
 
     return config
 
 # read the parameters file
 def read_param():
     param = configparser.ConfigParser()
-    param.read('param.ini')
+    param.read('ini_files/param.ini')
 
     p_data = param['Data']
 
@@ -50,6 +50,6 @@ def read_param():
 # read the backtest config file
 def read_backtest_param():
     config = configparser.ConfigParser()
-    config.read('backtest.ini')
+    config.read('ini_files/backtest.ini')
 
     return config

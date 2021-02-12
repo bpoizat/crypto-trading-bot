@@ -5,7 +5,7 @@ import csv
 # save a trade in the csv file
 # if the file doesn't exist, it's created
 def save_trade(trade):
-    filename = 'trade_record.csv'
+    filename = 'output/trade_record.csv'
     fieldnames = ['quantity', 'entry_price', 'exit_price', 'money_spent', 'money_earned', 'bilan']
 
     try:

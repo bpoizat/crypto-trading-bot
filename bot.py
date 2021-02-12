@@ -3,15 +3,15 @@
 import logging
 import time
 
-from indicators import calculate_indicators
-import strategy
-from decision import Decision
+from bot_src.indicators import calculate_indicators
+from bot_src import strategy
+from bot_src.decision import Decision
 
 from bot_io.config import read_param
 from bot_io.state import read_state, write_state
 import bot_io.telegram_bot as telegram_bot
 
-from bot_lib import *
+from bot_src.bot_lib import *
 
 if __name__ == "__main__":
 
